@@ -3,6 +3,7 @@
     android:orientation="horizontal"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
+    android:gravity="center_horizontal"
     >
 
 
@@ -20,6 +21,10 @@
         <!--/>-->
 
     <FrameLayout
+        android:id="@+id/imcontainer"
+        android:layout_centerHorizontal="true"
+        android:layout_centerInParent="true"
+        android:layout_centerVertical="true"
         android:layout_width="fill_parent"
         android:layout_height="fill_parent">
         <SurfaceView

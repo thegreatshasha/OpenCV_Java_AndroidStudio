@@ -25,6 +25,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Debug;
 import android.os.Environment;
+import android.view.Display;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.View;
@@ -32,8 +33,10 @@ import android.widget.Button;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 
 import android.util.Log;
+import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
@@ -58,10 +61,23 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
         //Button buttonStopCameraPreview = (Button)findViewById(R.id.stopcamerapreview);
         Button buttonTakePicture = (Button)findViewById(R.id.takepicture);
 
+        //param = camera.getParameters();
+        // Get camera
+        //Camera.Parameters params = camera.getParameters(); // mCamera is a Camera object
+        //List<Camera.Size> sizes = params.getSupportedPreviewSizes();
+
+        //int mFrameWidth = (int) sizes.get(position).width;
+        //int mFrameHeight = (int) sizes.get(position).height;
+
         getWindow().setFormat(PixelFormat.UNKNOWN);
         surfaceView = (SurfaceView)findViewById(R.id.surfaceview);
+
+
         surfaceHolder = surfaceView.getHolder();
         surfaceHolder.addCallback(this);
+        //surfaceView.setLayoutParams(params);
+
+
         surfaceHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
         buttonTakePicture.setOnClickListener(new View.OnClickListener(){
@@ -93,14 +109,14 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
         return result;
     }
 
-    public void drawTransparentCircle(Bitmap inp, int width, int height, Bitmap overlay){
+    public void drawTransparentCircle(Bitmap inp, int width, int height, Bitmap overlay, int backgroundAlpha){
         int radius = Math.min(width, height)/2;
         Canvas mCanvas = new Canvas(inp);
 
         // Instead of crop, draw the 80% circle here, don't worry about transparency for now
         // draw black rectangle + add cicle later
         Paint myPaint2 = new Paint();
-        myPaint2.setARGB(255, 0, 0, 0);
+        myPaint2.setARGB(backgroundAlpha, 0, 0, 0);
         myPaint2.setStrokeWidth(2);
         mCanvas.drawRect(0, 0, width, height, myPaint2);
 
@@ -118,7 +134,7 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
             ImageView imgView = (ImageView) findViewById(R.id.imageview);
 
             Bitmap result = Bitmap.createBitmap(imgView.getWidth(), imgView.getHeight(), Bitmap.Config.ARGB_8888);
-            drawTransparentCircle(result, imgView.getWidth(), imgView.getHeight(), null);
+            drawTransparentCircle(result, imgView.getWidth(), imgView.getHeight(), null, 175);
 
             //mCanvas.drawRect(0, 0, imgView.getWidth(), imgView.getHeight(), myPaint);
             //Bitmap crop = BitmapFactory.decodeResource(getResources(), R.drawable.ic_launcher);
@@ -134,14 +150,24 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
             //Debug.startMethodTracing();
             File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
             Bitmap orig = BitmapFactory.decodeByteArray(data , 0, data.length);
-//
-            Bitmap mask = Bitmap.createBitmap(orig.getWidth(), orig.getHeight(), Bitmap.Config.ARGB_8888);
-            drawTransparentCircle(mask, orig.getWidth(), orig.getHeight(), orig);
-            Bitmap finalImg = drawMask(orig, mask);
+
+            // Resize bitmap because its too big
+            int origWidth, origHeight, scaledWidth, scaledHeight;
+            origWidth = orig.getWidth();
+            origHeight = orig.getHeight();
+            scaledWidth = 1000;
+            scaledHeight = (origHeight*scaledWidth)/origWidth;
+
+            // Resized bitmap
+            Bitmap scaled = Bitmap.createScaledBitmap(orig, 1000, scaledHeight, true);
+            //Bitmap mask = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888);
+            //drawTransparentCircle(mask, scaledWidth, scaledHeight, orig, 255);
+            //Bitmap finalImg = drawMask(scaled, mask);
 
             // Fucking slow mate, why convert?
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            finalImg.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+            scaled.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+            //finalImg.compress(Bitmap.CompressFormat.JPEG, 100, stream);
             byte[] data2 = stream.toByteArray();
 
             if (pictureFile == null){
@@ -155,8 +181,8 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
                 fos.close();
 
                 orig.recycle();
-                mask.recycle();
-                finalImg.recycle();
+                //mask.recycle();
+                //finalImg.recycle();
 
                 Intent intent = new Intent(AndroidCamera.this, MainActivity.class);
                 intent.putExtra("image", pictureFile.toString());
@@ -178,9 +204,28 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
             camera = Camera.open();
             if (camera != null){
                 try {
+
+
+                    Camera.Parameters parameters = camera.getParameters();
+                    Camera.Size size = parameters.getPictureSize();
+                    double aspectRatio = (double)size.width/(double)size.height;
+                    Log.v("aspect", aspectRatio+"");
+
+                    Display display = getWindowManager().getDefaultDisplay();
+                    int screenWidth = display.getWidth();
+                    int screenHeight = display.getHeight();
+
+                    Log.v("screen", screenWidth+" : "+screenHeight);
+
+                    // Set frame size
+                    FrameLayout frame=(FrameLayout) findViewById(R.id.imcontainer);
+                    android.widget.RelativeLayout.LayoutParams params = new android.widget.RelativeLayout.LayoutParams(screenWidth, (int)(aspectRatio*screenWidth));
+                    frame.setLayoutParams(params);
+
                     camera.setDisplayOrientation(90);
                     camera.setPreviewDisplay(surfaceHolder);
                     camera.startPreview();
+
                     previewing = true;
                 } catch (IOException e) {
                     // TODO Auto-generated catch block
@@ -192,21 +237,27 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
 
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
-        // TODO Auto-generated method stub
-        if(!previewing){
-            camera = Camera.open();
-            if (camera != null){
-                try {
-                    camera.setDisplayOrientation(90);
-                    camera.setPreviewDisplay(surfaceHolder);
-                    camera.startPreview();
-                    previewing = true;
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                }
-            }
-        }
+//        // TODO Auto-generated method stub
+//        if(!previewing){
+//            camera = Camera.open();
+//            if (camera != null){
+//                try {
+//                    Camera.Parameters parameters = camera.getParameters();
+//                    List<Camera.Size> previewSizes = parameters.getSupportedPreviewSizes();
+//                    Camera.Size previewSize = previewSizes.get(4); //480h x 720w
+//
+//                    parameters.setPreviewSize(previewSize.width, previewSize.height);
+//                    camera.setDisplayOrientation(90);
+//                    camera.setPreviewDisplay(surfaceHolder);
+//                    camera.setParameters(parameters);
+//                    camera.startPreview();
+//                    previewing = true;
+//                } catch (IOException e) {
+//                    // TODO Auto-generated catch block
+//                    e.printStackTrace();
+//                }
+//            }
+//        }
 
     }
 

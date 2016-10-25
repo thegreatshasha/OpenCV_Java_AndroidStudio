@@ -4,6 +4,7 @@ import android.util.Log;
 import android.util.Pair;
 
 import org.opencv.core.Core;
+import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -30,6 +31,8 @@ public class HelloCv extends Test{
             Mat gray = new Mat(source.rows(), source.cols(), CvType.CV_8UC1);
             Mat tophat = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1);
             Mat dt = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1);
+            Mat mask = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1, Scalar.all(0));
+            Mat tophat_mask = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1);
             Mat rm = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1);
             destination = source;
 
@@ -37,12 +40,24 @@ public class HelloCv extends Test{
             Imgproc.cvtColor(destination, gray, Imgproc.COLOR_BGR2GRAY);
 
             // Do top hat filtering to correct for uneven illumination, does it work for all images? Let's hope so or we'll implement rolling ball algorithm
-            Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(35,35));
+            Mat kernel = Imgproc.getStructuringElement(Imgproc.MORPH_ELLIPSE, new Size(50,50));
             Imgproc.morphologyEx(gray, tophat, Imgproc.MORPH_TOPHAT, kernel);
             Test.saveImg("tophat.jpg", tophat);
 
+            // Apply mask
+            Point center = new Point(source.cols()/2, source.rows()/2);
+            Scalar maskColor = new Scalar(255, 255, 255);
+
+            Imgproc.circle(mask, center, Math.min(source.rows()/2, source.cols()/2), maskColor, -1);
+            Test.saveImg("mask.jpg", mask);
+
+            // Mask is fine, it's the bitwise_and which is not working
+            tophat.copyTo(tophat_mask, mask);
+            Core.bitwise_and(tophat, tophat, tophat_mask, mask);
+            Test.saveImg("tophat_mask.jpg", tophat_mask);
+
             // Otsu thresholding on the tophat image
-            Imgproc.threshold(tophat,gray,0,255,Imgproc.THRESH_BINARY|Imgproc.THRESH_OTSU);
+            Imgproc.threshold(tophat_mask,gray,0,255,Imgproc.THRESH_BINARY|Imgproc.THRESH_OTSU);
 
             // Save everything
             Test.saveImg("threshold.png", gray);
@@ -76,7 +91,7 @@ public class HelloCv extends Test{
 
             // Do the distance trnasform and count
             Imgproc.distanceTransform(black, dt, Imgproc.CV_DIST_L2, Imgproc.CV_DIST_MASK_PRECISE);
-            //Test.saveImg("distance_transform.png", dt);
+            Test.saveImg("distance_transform.png", dt);
 
             rm = Test.regional_maxima(dt);
             //Test.saveImg("regional_maxima.png", rm);

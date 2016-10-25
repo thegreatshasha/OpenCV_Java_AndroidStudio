@@ -156,7 +156,8 @@ public class MainActivity extends Activity {
         protected Pair<Mat,Integer> doInBackground(Mat... params){
             Mat inp = params[0];
             // Do image processing
-            Mat resized = Test.scaledResize(inp, 1000);
+            Mat resized = inp;
+            //Mat resized = Test.scaledResize(inp, 1000);
             return HelloCv.countColonies(resized);
 
             //Pair<Mat,Integer> result = Pair.create(resized, count);
