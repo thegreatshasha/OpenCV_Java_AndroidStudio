@@ -148,7 +148,8 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
         @Override
         public void onPictureTaken(byte[] data, Camera cm){
             //Debug.startMethodTracing();
-            File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+            File pictureFileOrig = getOutputMediaFile(MEDIA_TYPE_IMAGE, "ColonyCounterOrig");
+            File pictureFileScaled = getOutputMediaFile(MEDIA_TYPE_IMAGE, "ColonyCounterScaled");
             Bitmap orig = BitmapFactory.decodeByteArray(data , 0, data.length);
 
             // Resize bitmap because its too big
@@ -170,22 +171,27 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
             //finalImg.compress(Bitmap.CompressFormat.JPEG, 100, stream);
             byte[] data2 = stream.toByteArray();
 
-            if (pictureFile == null){
+            if (pictureFileScaled == null){
                 Log.d("asgard", "Error creating media file, check storage permissions: ");
                 return;
             }
 
             try {
-                FileOutputStream fos = new FileOutputStream(pictureFile);
-                fos.write(data2);
-                fos.close();
+                // Write both original and scaled image to phone
+                FileOutputStream fosOrig = new FileOutputStream(pictureFileOrig);
+                fosOrig.write(data);
+                fosOrig.close();
+
+                FileOutputStream fosScaled = new FileOutputStream(pictureFileScaled);
+                fosScaled.write(data2);
+                fosScaled.close();
 
                 orig.recycle();
                 //mask.recycle();
                 //finalImg.recycle();
 
                 Intent intent = new Intent(AndroidCamera.this, MainActivity.class);
-                intent.putExtra("image", pictureFile.toString());
+                intent.putExtra("image", pictureFileScaled.toString());
                 startActivity(intent);
 
             } catch (FileNotFoundException e) {
@@ -207,6 +213,8 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
 
 
                     Camera.Parameters parameters = camera.getParameters();
+                    parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE);
+
                     Camera.Size size = parameters.getPictureSize();
                     double aspectRatio = (double)size.width/(double)size.height;
                     Log.v("aspect", aspectRatio+"");
@@ -224,6 +232,7 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
 
                     camera.setDisplayOrientation(90);
                     camera.setPreviewDisplay(surfaceHolder);
+                    camera.setParameters(parameters);
                     camera.startPreview();
 
                     previewing = true;
@@ -272,17 +281,17 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback{
     }
 
     /** Create a file Uri for saving an image or video */
-    private static Uri getOutputMediaFileUri(int type){
-        return Uri.fromFile(getOutputMediaFile(type));
+    private static Uri getOutputMediaFileUri(int type, String directory){
+        return Uri.fromFile(getOutputMediaFile(type, directory));
     }
 
     /** Create a File for saving an image or video */
-    private static File getOutputMediaFile(int type){
+    private static File getOutputMediaFile(int type, String directory){
         // To be safe, you should check that the SDCard is mounted
         // using Environment.getExternalStorageState() before doing this.
 
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_PICTURES), "MyCameraApp");
+                Environment.DIRECTORY_PICTURES), directory);
         // This location works best if you want the created images to be shared
         // between applications and persist after your app has been uninstalled.
 

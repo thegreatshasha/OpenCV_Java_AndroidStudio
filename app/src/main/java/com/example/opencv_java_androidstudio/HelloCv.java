@@ -26,9 +26,11 @@ public class HelloCv extends Test{
 
     public static Pair<Mat, Integer> countColonies(Mat inp){
 
+            // Initialize matrices
             Mat source = inp.clone();
             Mat destination = source;
             Mat gray = new Mat(source.rows(), source.cols(), CvType.CV_8UC1);
+            Mat blur = new Mat(source.rows(), source.cols(), CvType.CV_8UC1);
             Mat tophat = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1);
             Mat dt = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1);
             Mat mask = new Mat(gray.rows(), gray.cols(), CvType.CV_8UC1, Scalar.all(0));
@@ -44,16 +46,19 @@ public class HelloCv extends Test{
             Imgproc.morphologyEx(gray, tophat, Imgproc.MORPH_TOPHAT, kernel);
             Test.saveImg("tophat.jpg", tophat);
 
+            // Blur before thresholding
+            Imgproc.GaussianBlur(tophat, blur, new Size(5,5), 0);
+            Test.saveImg("blurred.jpg", blur);
+            //blur = tophat;
+
             // Apply mask
             Point center = new Point(source.cols()/2, source.rows()/2);
             Scalar maskColor = new Scalar(255, 255, 255);
 
-            Imgproc.circle(mask, center, Math.min(source.rows()/2, source.cols()/2), maskColor, -1);
+            Imgproc.circle(mask, center, Math.min(source.rows()/2, source.cols()/2) - 15, maskColor, -1);
             Test.saveImg("mask.jpg", mask);
-
-            // Mask is fine, it's the bitwise_and which is not working
-            tophat.copyTo(tophat_mask, mask);
-            Core.bitwise_and(tophat, tophat, tophat_mask, mask);
+            blur.copyTo(tophat_mask, mask);
+            Core.bitwise_and(blur, blur, tophat_mask, mask);
             Test.saveImg("tophat_mask.jpg", tophat_mask);
 
             // Otsu thresholding on the tophat image
@@ -80,14 +85,14 @@ public class HelloCv extends Test{
 
                 double circ = (4*Math.PI*area)/(Math.pow(perimeter,2));
 
-                if(circ>0.2 && area>20 && area<1600){
+                if(area>100){
                     cnts.add(contours.get(i));
                 }
             }
 
             Mat black = Mat.zeros(gray.rows(), gray.cols(), CvType.CV_8UC1);
             Imgproc.drawContours(black, cnts, -1, new Scalar(255,255,255), -1);
-            //Test.saveImg("black_contours.png", black);
+            Test.saveImg("black_contours.png", black);
 
             // Do the distance trnasform and count
             Imgproc.distanceTransform(black, dt, Imgproc.CV_DIST_L2, Imgproc.CV_DIST_MASK_PRECISE);
@@ -108,6 +113,17 @@ public class HelloCv extends Test{
             //inp = black;
             //Test.saveImg("final.png", source);
             Pair<Mat,Integer> p = Pair.create(black, count);
+
+            // Release all memory matrices
+            destination.release();
+            gray.release();
+            blur.release();
+            tophat.release();
+            dt.release();
+            mask.release();
+            tophat_mask.release();
+            rm.release();
+
             return p;
     }
 
