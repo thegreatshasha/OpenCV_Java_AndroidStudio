@@ -1,5 +1,5 @@
 # Colonizer
-An open source android app to automaically count your colonies
+An open source android app to automaically count your colonies using image processing.
 
 ## Setup
 * You can install the app on play store here https://play.google.com/store/apps/details?id=com.shashwat.opencv_java_androidstudio
