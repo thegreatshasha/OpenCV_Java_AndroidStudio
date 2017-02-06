@@ -2,9 +2,9 @@
 An open source android app to automaically count your colonies
 
 ## Setup
-You can install the app on play store here https://play.google.com/store/apps/details?id=com.shashwat.opencv_java_androidstudio
-For compiling from source, clone the repository, import the project in android studio, build the apk and run it.
-Follow the steps for box construction to get better accuracy.
+* You can install the app on play store here https://play.google.com/store/apps/details?id=com.shashwat.opencv_java_androidstudio
+* For compiling from source, clone the repository, import the project in android studio, build the apk and run it.
+* Follow the steps for box construction to get better accuracy.
 
 ## Accuracy
 The accuracy for the Android app was determined by comparing the manual counts with the algorithm
